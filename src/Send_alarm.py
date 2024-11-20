@@ -17,10 +17,10 @@ import requests
 class SendAlarm(QObject):
     # 定义一个信号来更新进度
     progress_signal = pyqtSignal(int)
-    def __init__(self,initstr='qmk vial start',hostip= '39.107.228.114',url='/teset/bmc'):
+    def __init__(self,initstr='qmk vial start',hostip= '39.107.228.114',url='/teset/netconfig'):
         super().__init__()
-        self.hostip='39.107.228.114'
-        self.url='/teset/bmc'
+        self.hostip=hostip
+        self.url=url
         #根据不同操作系统修改名字
         if sys.platform.startswith("MacOS"):
             self.setup_pack_url = "/download/YueHPeri_setup.mac"
@@ -33,11 +33,12 @@ class SendAlarm(QObject):
                          "Content-type": "application/json", "Accept": "*/*"}
         self.body_param={'subject':"",\
             'content':"",\
+            'url':"",\
             "id":"bmc"}
         self.body_param['subject']=initstr
 
 
-    def start_alarm(self,sendstr):
+    def start_alarm(self,sendstr,jump_url="http://39.107.228.114:6006"):
         try:
             # return
             #获取主机名
@@ -46,6 +47,7 @@ class SendAlarm(QObject):
             ip_address = socket.gethostbyname(hostname)
             msgdata="{}-{}#{}".format(hostname,ip_address,sendstr)
             self.body_param['content']= msgdata;
+            self.body_param['url'] = jump_url;
             
             conn = HTTPConnection(self.hostip,80,timeout=10)
             body_str=json.dumps(self.body_param)
@@ -189,8 +191,8 @@ class SendAlarm(QObject):
         download_thread_obj.start()
 
 if __name__=="__main__":
-    s=SendAlarm()
-    s.start_alarm("qmk start")
+    s=SendAlarm(initstr="城市内涝#街道淹水",url="/teset/cityAI")
+    s.start_alarm(sendstr="学士路和联丰路交叉口#水位30cm",jump_url="http://39.107.228.114:6006/#/page/debug-reboot-bmc.html")
 
     #start_program()
 
