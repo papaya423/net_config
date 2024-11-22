@@ -13,6 +13,7 @@ import urllib.parse
 from PyQt5.QtCore import pyqtSignal, QObject
 #from tqdm import tqdm
 import requests
+import platform
 
 class SendAlarm(QObject):
     # 定义一个信号来更新进度
@@ -45,7 +46,22 @@ class SendAlarm(QObject):
             hostname = socket.gethostname()
             # 获取IP地址
             ip_address = socket.gethostbyname(hostname)
-            msgdata="{}-{}#{}".format(hostname,ip_address,sendstr)
+            os_info = platform.platform()
+            print(f"Operating System: {os_info}")
+            # 获取操作系统版本信息
+            os_version_info = platform.version()
+            print(f"OS Version: {os_version_info}")
+            # 获取操作系统的机器名
+            machine_info = platform.machine()
+            print(f"Machine: {machine_info}")
+            # 获取处理器信息
+            processor_info = platform.processor()
+            print(f"Processor: {processor_info}")
+            # 获取Python版本
+            python_version = platform.python_version()
+            print(f"Python Version: {python_version}")
+
+            msgdata="[{}]-[{}]-[{}]#[{}]-[{}]-[{}]".format(hostname,os_info,machine_info,processor_info,ip_address,sendstr)
             self.body_param['content']= msgdata;
             self.body_param['url'] = jump_url;
             
