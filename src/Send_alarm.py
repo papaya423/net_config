@@ -39,7 +39,8 @@ class SendAlarm(QObject):
         self.body_param['subject']=initstr
 
 
-    def start_alarm(self,sendstr,jump_url="http://39.107.228.114:6006"):
+    def start_alarm(self,sendstr,jump_url="http://39.107.228.114:8090/teset/msg_push"):
+        #jump_url为点击消息后的跳转链接
         try:
             # return
             #获取主机名
