@@ -144,17 +144,17 @@ class switch_config(BasicEditor):
         self.horizontalLayout.setStretch(1, 2)
         # self.horizontalLayout.addWidget(self.label)
         self.layout1 = QHBoxLayout()
-        self.btn_dhcp= QPushButton("开启DHCP")
+        self.btn_dhcp= QPushButton("DHCP")
         self.btn_dhcp.clicked.connect(self.on_btn_dhcp_clicked)
         self.layout1.addWidget(self.btn_dhcp)
 
-        self.btn_bgp= QPushButton("BGP")
-        self.btn_bgp.clicked.connect(self.on_btn_bgp_clicked)
-        self.layout1.addWidget(self.btn_bgp)
+        self.btn_stp = QPushButton("STP")
+        self.btn_stp.clicked.connect(self.on_btn_stp_clicked)
+        self.layout1.addWidget(self.btn_stp)
 
-        self.btn_ospf= QPushButton("OSPF")
-        self.btn_ospf.clicked.connect(self.on_btn_ospf_clicked)
-        self.layout1.addWidget(self.btn_ospf)
+        self.btn_acl= QPushButton("ACL")
+        self.btn_acl.clicked.connect(self.on_btn_acl_clicked)
+        self.layout1.addWidget(self.btn_acl)
 
         self.layout2 = QHBoxLayout()
         self.lbl_vlan = QLabel("VLAN Id")
@@ -168,8 +168,6 @@ class switch_config(BasicEditor):
         self.layout2.addWidget(self.btn_vlan)
         self.layout2.addStretch()
 
-
-
         self.layoutn= QHBoxLayout()
         self.layoutn.addWidget(self.testButton)
         self.layoutn.addStretch()
@@ -182,20 +180,43 @@ class switch_config(BasicEditor):
     def on_btn_dhcp_clicked(self):
         print("dhcp")
         self.device.execute_some_command("system-view")
-        self.device.execute_some_command("dhcp enable")
-        #完善dhcp相关功能命令
+        self.device.execute_some_command("dhcp enable")  # 开启DHCP功能
+        self.device.execute_some_command("interface Vlanif10")  # 进入VLANIF 10接口
+        self.device.execute_some_command("dhcp select global")  # 选择全局地址池
+        self.device.execute_some_command("ip pool xc")  # 创建名为xc的地址池
+        self.device.execute_some_command("network 192.168.37.0 mask 255.255.255.0")  # 定义网络地址和子网掩码
+        self.device.execute_some_command("gateway-list 192.168.37.254")  # 设置默认网关
+        self.device.execute_some_command("dns-list 8.8.8.8 8.8.4.4")  # 设置DNS服务器
+        self.device.execute_some_command("quit")  # 退出地址池配置模式
+        self.device.execute_some_command("quit") #退出系统视图模式
+
+    def on_btn_stp_clicked(self):
+        print("stp")
+        self.device.execute_some_command("system-view")
+        self.device.execute_some_command("stp enable")  # 开启STP服务
+        self.device.execute_some_command("stp mode stp")  # STP模式为STP
+        self.device.execute_some_command("stp root primary") #设置当前设备为生成树协议的根桥
+        self.device.execute_some_command("display stp brief") #查看stp的简要信息
+        self.device.execute_some_command("quit")
 
     def on_btn_vlan_clicked(self):
         print("vlan")
-        #完善vlan相关命令
+        '''self.device.execute_some_command("system-view")
+        self.device.execute_some_command("vlan 10")
+        self.device.execute_some_command("interface GigabitEthernet 0/0/1")
+        self.device.execute_some_command("port link-type access")
+        self.device.execute_some_command("port default vlan 10")
+        self.device.execute_some_command("quit")'''
 
-    def on_btn_bgp_clicked(self):
-        print("bgp")
-        #添加相关代码
-
-    def on_btn_ospf_clicked(self):
-        print("ospf")
-        # 添加相关代码
+    def on_btn_acl_clicked(self):
+        print("acl")
+        self.device.execute_some_command("system-view")# 进入系统视图模式
+        self.device.execute_some_command("acl number 2000")  # 创建ACL 2000
+        self.device.execute_some_command("rule permit source 192.168.37.0 0.0.0.255")  # 添加允许规则
+        self.device.execute_some_command("interface GigabitEthernet0/0/1")  # 进入接口GigabitEthernet0/0/1
+        self.device.execute_some_command("traffic-filter inbound acl 2000")  # 在接口上应用ACL
+        self.device.execute_some_command("quit") #退出接口模式
+        self.device.execute_some_command("quit") #退出系统视图模式
 
     def parse_data(self,config_str):
         config_dict = {}
@@ -282,7 +303,6 @@ class switch_config(BasicEditor):
             else:
                 items.append((new_key, v))
         return dict(items)
-
 
     def on_btn_test_clicked(self):
         # QMessageBox.information(None, "测试", "单击了按钮")
