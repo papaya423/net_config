@@ -123,6 +123,7 @@ class MainWindow(QMainWindow):
         self.receiver = None
         self.net_receiver=None
         self.current_device=None
+        self.telnet_state=0
         self.initUI()
         self.alarm = SendAlarm("net visual config")
         self.alarm.start_alarm("net visual config app start!")
@@ -302,14 +303,25 @@ class MainWindow(QMainWindow):
         port=self.bind_port_textedit.text()
         username=self.username_textedit.text()
         password=self.password_textedit.text()
-        self.telnet_client = TelnetClient()
-        # 如果登录结果返加True，则执行命令，然后退出
-        if self.telnet_client.login_host(host_ip, port, username, password) ==False:
-            QMessageBox.information(None, "失败", "telnet连接失败")
+        if self.telnet_state==0:
+            self.telnet_client = TelnetClient()
+            # 如果登录结果返加True，则执行命令，然后退出
+            if self.telnet_client.login_host(host_ip, port, username, password) ==False:
+                QMessageBox.information(None, "失败", "telnet连接失败")
+            else:
+                QMessageBox.information(None, "成功", "telnet连接成功")
+                self.current_device = self.telnet_client
+                self.on_devices_updated(self.current_device,1)
+                self.btopen_netlisten.setText("telnet断开")
+                self.telnet_state=1
         else:
-            QMessageBox.information(None, "成功", "telnet连接成功")
-            self.current_device = self.telnet_client
-            self.on_devices_updated(self.current_device,1)
+            self.telnet_state=0
+            self.telnet_client.logout_host()
+            self.current_device=None
+            self.on_devices_updated(self.current_device, 1)
+            self.btopen_netlisten.setText("telnet连接")
+
+
 
 
     def open_net_listen(self):
