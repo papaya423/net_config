@@ -13,14 +13,15 @@ import urllib.parse
 from PyQt5.QtCore import pyqtSignal, QObject
 #from tqdm import tqdm
 import requests
+import platform
 
 class SendAlarm(QObject):
     # 定义一个信号来更新进度
     progress_signal = pyqtSignal(int)
-    def __init__(self,initstr='qmk vial start',hostip= '39.107.228.114',url='/teset/bmc'):
+    def __init__(self,initstr='qmk vial start',hostip= '39.107.228.114',url='/teset/netconfig'):
         super().__init__()
-        self.hostip='39.107.228.114'
-        self.url='/teset/bmc'
+        self.hostip=hostip
+        self.url=url
         #根据不同操作系统修改名字
         if sys.platform.startswith("MacOS"):
             self.setup_pack_url = "/download/YueHPeri_setup.mac"
@@ -33,19 +34,37 @@ class SendAlarm(QObject):
                          "Content-type": "application/json", "Accept": "*/*"}
         self.body_param={'subject':"",\
             'content':"",\
+            'url':"",\
             "id":"bmc"}
         self.body_param['subject']=initstr
 
 
-    def start_alarm(self,sendstr):
+    def start_alarm(self,sendstr,jump_url="http://39.107.228.114:8090/teset/msg_push"):
+        #jump_url为点击消息后的跳转链接
         try:
             # return
             #获取主机名
             hostname = socket.gethostname()
             # 获取IP地址
             ip_address = socket.gethostbyname(hostname)
-            msgdata="{}-{}#{}".format(hostname,ip_address,sendstr)
+            os_info = platform.platform()
+            print(f"Operating System: {os_info}")
+            # 获取操作系统版本信息
+            os_version_info = platform.version()
+            print(f"OS Version: {os_version_info}")
+            # 获取操作系统的机器名
+            machine_info = platform.machine()
+            print(f"Machine: {machine_info}")
+            # 获取处理器信息
+            processor_info = platform.processor()
+            print(f"Processor: {processor_info}")
+            # 获取Python版本
+            python_version = platform.python_version()
+            print(f"Python Version: {python_version}")
+
+            msgdata="[{}]-[{}]-[{}]#[{}]-[{}]-[{}]".format(hostname,os_info,machine_info,processor_info,ip_address,sendstr)
             self.body_param['content']= msgdata;
+            self.body_param['url'] = jump_url;
             
             conn = HTTPConnection(self.hostip,80,timeout=10)
             body_str=json.dumps(self.body_param)
@@ -189,8 +208,8 @@ class SendAlarm(QObject):
         download_thread_obj.start()
 
 if __name__=="__main__":
-    s=SendAlarm()
-    s.start_alarm("qmk start")
+    s=SendAlarm(initstr="城市内涝#街道淹水",url="/teset/cityAI")
+    s.start_alarm(sendstr="学士路和联丰路交叉口#水位30cm",jump_url="http://39.107.228.114:6006/#/page/debug-reboot-bmc.html")
 
     #start_program()
 
