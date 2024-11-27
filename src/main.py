@@ -227,7 +227,7 @@ class MainWindow(QMainWindow):
 [Huawei-vlan10]quit
 [Huawei]interface vl	
 [Huawei]interface Vlanif 10
-[Huawei-Vlanif10]ip address 192.168.0.115 24
+[Huawei-Vlanif10]ip address 192.168.56.2 24
 [Huawei-Vlanif10]quit
 [Huawei]interface GigabitEthernet 0/0/1
 [Huawei-GigabitEthernet0/0/1]port link-type access
@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
         self.lbl_no_devices = QLabel(tr("MainWindow", no_devices))
 
         self.lbl_topo =QLabel("topo")
-        pixmap = QPixmap(self.current_file_path+"topo.jpg")
+        pixmap = QPixmap(self.current_file_path+"topo1.jpg")
         if pixmap.isNull():
             print("无法加载图片 topo.jpg")
         # 如果图片不在内存中，就缩放到QLabel的大小

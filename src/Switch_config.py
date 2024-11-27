@@ -145,6 +145,19 @@ class switch_config(BasicEditor):
         # self.horizontalLayout.addWidget(self.label)
         self.layout1 = QHBoxLayout()
         self.btn_dhcp= QPushButton("DHCP")
+        dhcp_tool_tip='''
+        按如下方式命令配置设备：
+        system-view
+        dhcp enable
+        interface Vlanif10
+        dhcp select global
+        ip pool xc
+        network 192.168.37.0 mask 255.255.255.0
+        dns-list 8.8.8.8 8.8.4.4
+        quit
+        quit
+        '''
+        self.btn_dhcp.setToolTip(dhcp_tool_tip)
         self.btn_dhcp.clicked.connect(self.on_btn_dhcp_clicked)
         self.layout1.addWidget(self.btn_dhcp)
 
