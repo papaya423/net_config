@@ -45,36 +45,43 @@ class TelnetClient():
     # 此函数实现执行传过来的命令，并输出其执行结果
     def execute_some_command(self, command):
         # 执行命令
-        command_result=""
-        self.tn.write(command.encode('ascii') + b'\n')
-        # self.tn.write(b'\nver\n')
-        time.sleep(0.1)
-        # 获取命令结果
-        tmp = self.tn.read_very_eager()
-        tmp = tmp.decode('ascii')
-        command_result = command_result + tmp
-        command_result = command_result.replace("---- More ----", "\r\n")
-        while "---- More ----" in tmp:
-            self.tn.write(b'\r\n')
+        try:
+            command_result=""
+            self.tn.write(command.encode('ascii') + b'\n')
+            # self.tn.write(b'\nver\n')
             time.sleep(0.1)
-            tmp = self.tn.read_very_eager().decode('ascii')
-            tmpdata=tmp
-            tmpdata = tmpdata.replace("---- More ----","\r\n")
-            tmpdata = remove_invisible_characters(tmpdata)
-            tmpdata = tmpdata.replace("[42D","")
-            tmpdata = tmpdata.lstrip()
-            command_result =command_result+"\r\n"+tmpdata
+            # 获取命令结果
+            tmp = self.tn.read_very_eager()
+            tmp = tmp.decode('ascii')
+            command_result = command_result + tmp
+            command_result = command_result.replace("---- More ----", "\r\n")
+            while "---- More ----" in tmp:
+                self.tn.write(b'\r\n')
+                time.sleep(0.1)
+                tmp = self.tn.read_very_eager().decode('ascii')
+                tmpdata=tmp
+                tmpdata = tmpdata.replace("---- More ----","\r\n")
+                tmpdata = remove_invisible_characters(tmpdata)
+                tmpdata = tmpdata.replace("[42D","")
+                tmpdata = tmpdata.lstrip()
+                command_result =command_result+"\r\n"+tmpdata
 
-            print(f"tmp={tmp}")
-            print(f"command_result={command_result}")
-        logging.warning('命令执行结果：\n%s' % command_result)
-        # print("***********结果返回**************：\n", command_result);
-        return command_result;
+                print(f"tmp={tmp}")
+                print(f"command_result={command_result}")
+            logging.warning('命令执行结果：\n%s' % command_result)
+            self.tn.write(b'\r\n')
+            # print("***********结果返回**************：\n", command_result);
+            return command_result
+        except:
+            print("execute_some_command error!")
+
 
     # 退出telnet
     def logout_host(self):
-        self.tn.write(b"exit\n")
-
+        try:
+            self.tn.write(b"exit\n")
+        except:
+            print("logout_host error!")
 
 if __name__ == '__main__':
     host_ip = '192.168.17.2'
