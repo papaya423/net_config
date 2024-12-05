@@ -145,6 +145,7 @@ class switch_config(BasicEditor):
         # self.horizontalLayout.addWidget(self.label)
         self.layout1 = QHBoxLayout()
         self.btn_dhcp= QPushButton("DHCP")
+        self.dhcp_inputIp = QLineEdit()
         dhcp_tool_tip='''
         按如下方式命令配置设备：
         system-view
@@ -160,6 +161,8 @@ class switch_config(BasicEditor):
         self.btn_dhcp.setToolTip(dhcp_tool_tip)
         self.btn_dhcp.clicked.connect(self.on_btn_dhcp_clicked)
         self.layout1.addWidget(self.btn_dhcp)
+        self.layout1.addWidget(self.dhcp_inputIp)
+
 
         self.btn_stp = QPushButton("STP")
         self.btn_stp.clicked.connect(self.on_btn_stp_clicked)
@@ -204,12 +207,16 @@ class switch_config(BasicEditor):
 
     def on_btn_dhcp_clicked(self):
         print("dhcp")
+        ip_str =self.dhcp_inputIp.text()
+        print(ip_str)
         self.device.execute_some_command("system-view")
         self.device.execute_some_command("dhcp enable")  # 开启DHCP功能
         self.device.execute_some_command("interface Vlanif10")  # 进入VLANIF 10接口
         self.device.execute_some_command("dhcp select global")  # 选择全局地址池
         self.device.execute_some_command("ip pool xc")  # 创建名为xc的地址池
-        self.device.execute_some_command("network 192.168.37.0 mask 255.255.255.0")  # 定义网络地址和子网掩码
+        # net_str=f"network {ip_str} mask 255.255.255.0"
+        self.device.execute_some_command(f"network {ip_str} mask 255.255.255.0")
+        # self.device.execute_some_command("network 192.168.37.0 mask 255.255.255.0")  # 定义网络地址和子网掩码
         self.device.execute_some_command("gateway-list 192.168.37.254")  # 设置默认网关
         self.device.execute_some_command("dns-list 8.8.8.8 8.8.4.4")  # 设置DNS服务器
         self.device.execute_some_command("quit")  # 退出地址池配置模式
@@ -303,6 +310,8 @@ class switch_config(BasicEditor):
         config_dict = {}
         current_key = None
         current_sub_dict = None
+        if config_str is None:
+            return
 
         lines = config_str.split('\n')
         for line in lines:
@@ -388,7 +397,7 @@ class switch_config(BasicEditor):
     def on_btn_test_clicked(self):
         # 查看配置disp cu
         #在该函数下添加你想要做的操作代码
-        self.device.execute_some_command("quit")
+        # self.device.execute_some_command("quit")
         retstr= self.device.execute_some_command("disp cu")
         self.lineEdit.setText(retstr)
         result =self.parse_data(retstr)
@@ -397,6 +406,9 @@ class switch_config(BasicEditor):
         self.add_dict_to_tree(self.treedata, result)
 
     def add_dict_to_tree(self, tree, data):
+        if data is None:
+            print("data is null")
+            return
         for key, value in data.items():
             item = QTreeWidgetItem([key, str(value)])
             if isinstance(value, dict):
