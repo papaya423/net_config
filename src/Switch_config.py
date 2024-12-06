@@ -122,10 +122,8 @@ class switch_config(BasicEditor):
 
 
     def setupUi(self,Form,contain):
-
         # self.label = QLabel("按钮")
         self.testButton = QPushButton("查看配置")
-
         self.testButton.clicked.connect(self.on_btn_test_clicked)
         self.treedata = QTreeWidget()
         self.treedata.setFixedWidth(600)
@@ -144,45 +142,77 @@ class switch_config(BasicEditor):
         self.horizontalLayout.setStretch(1, 2)
         # self.horizontalLayout.addWidget(self.label)
         self.layout1 = QHBoxLayout()
+        dhcp_layout = QVBoxLayout()
         self.btn_dhcp= QPushButton("DHCP")
+        self.dhcp_label = QLabel("定义网络地址")  # 创建QLabel
         self.dhcp_inputIp = QLineEdit()
-        dhcp_tool_tip='''
-        按如下方式命令配置设备：
-        system-view
-        dhcp enable
-        interface Vlanif10
-        dhcp select global
-        ip pool xc
-        network 192.168.37.0 mask 255.255.255.0
-        dns-list 8.8.8.8 8.8.4.4
-        quit
-        quit
-        '''
-        self.btn_dhcp.setToolTip(dhcp_tool_tip)
+        self.btn_dhcp.setToolTip(
+            """这是DHCP功能的配置:
+            system - view
+            dhcp enable
+            interface Vlanif10
+            dhcp select global
+            quit
+            ip pool xc
+            network 192.168.37.0 mask 255.255.255.0
+            gateway - list 192.168.37.254
+            dns - list 8.8.8.8 8.8.4.4
+            quit
+            display ip pool xc
+            quit""")
         self.btn_dhcp.clicked.connect(self.on_btn_dhcp_clicked)
-        self.layout1.addWidget(self.btn_dhcp)
-        self.layout1.addWidget(self.dhcp_inputIp)
+        dhcp_layout.addWidget(self.dhcp_label)  # 添加标签
+        dhcp_layout.addWidget(self.dhcp_inputIp)
+        dhcp_layout.addWidget(self.btn_dhcp)
+        self.layout1.addLayout(dhcp_layout)
+        self.dhcp_inputIp.setFixedSize(300,45)
 
-
+        stp_layout = QVBoxLayout()
         self.btn_stp = QPushButton("STP")
+        self.stp_label = QLabel("选择stp模式")
+        self.stp_comboBox = QComboBox()  # 创建QComboBox
+        self.stp_comboBox.addItems(["stp", "rstp", "mstp"])  # 设置选项
+        self.btn_stp.setToolTip(
+            """这是STP功能的配置:
+            system - view
+            stp enable
+            stp mode stp
+            stp root primary
+            interface GigabitEthernet 0/0/1
+            stp edged-port enable
+            stp port priority 128
+            stp cost 2000
+            quit
+            display stp brief
+            quit""")
         self.btn_stp.clicked.connect(self.on_btn_stp_clicked)
-        self.layout1.addWidget(self.btn_stp)
+        stp_layout.addWidget(self.stp_label)
+        stp_layout.addWidget(self.stp_comboBox)  # 添加QComboBox
+        stp_layout.addWidget(self.btn_stp)
+        self.layout1.addLayout(stp_layout)
+        self.btn_stp.setFixedWidth(300)
+        self.stp_comboBox.setFixedSize(300, 45)
 
+        acl_layout = QVBoxLayout()
         self.btn_acl= QPushButton("ACL")
+        self.acl_label = QLabel("添加源IP")  # 创建QLabel
+        self.acl_inputIp = QLineEdit()
+        self.btn_acl.setToolTip(
+            """这是ACL功能的配置:
+            system - view
+            acl number 2000
+            rule permit source 192.168.37.115 0
+            interface GigabitEthernet0/0/1
+            traffic-filter inbound acl 2000
+            quit
+            display acl 2000
+            quit""")
         self.btn_acl.clicked.connect(self.on_btn_acl_clicked)
-        self.layout1.addWidget(self.btn_acl)
-
-        self.btn_vrrp= QPushButton("VRRP")
-        self.btn_vrrp.clicked.connect(self.on_btn_vrrp_clicked)
-        self.layout1.addWidget(self.btn_vrrp)
-
-        self.btn_vlan= QPushButton("VLAN")
-        self.btn_vlan.clicked.connect(self.on_btn_vlan_clicked)
-        self.layout1.addWidget(self.btn_vlan)
-
-        self.btn_ospf= QPushButton("OSPF")
-        self.btn_ospf.clicked.connect(self.on_btn_ospf_clicked)
-        self.layout1.addWidget(self.btn_ospf)
+        acl_layout.addWidget(self.acl_label)  # 添加标签
+        acl_layout.addWidget(self.acl_inputIp)
+        acl_layout.addWidget(self.btn_acl)
+        self.layout1.addLayout(acl_layout)
+        self.acl_inputIp.setFixedSize(300, 45)
 
         self.layout2 = QHBoxLayout()
         self.lbl_vlan = QLabel("VLAN Id")
@@ -207,111 +237,89 @@ class switch_config(BasicEditor):
 
     def on_btn_dhcp_clicked(self):
         print("dhcp")
-        ip_str =self.dhcp_inputIp.text()
-        print(ip_str)
+        network_str=self.dhcp_inputIp.text()
+        print(network_str)
         self.device.execute_some_command("system-view")
         self.device.execute_some_command("dhcp enable")  # 开启DHCP功能
         self.device.execute_some_command("interface Vlanif10")  # 进入VLANIF 10接口
         self.device.execute_some_command("dhcp select global")  # 选择全局地址池
+        self.device.execute_some_command("quit")  # 退出接口配置模式
+        result = self.device.execute_some_command("display ip pool")
+        if "xc"in result:
+            print("地址池xc已存在,正在删除...")
+            self.device.execute_some_command("undo ip pool xc")
+        else:
+            print("创建新的地址池xc")
         self.device.execute_some_command("ip pool xc")  # 创建名为xc的地址池
-        # net_str=f"network {ip_str} mask 255.255.255.0"
-        self.device.execute_some_command(f"network {ip_str} mask 255.255.255.0")
-        # self.device.execute_some_command("network 192.168.37.0 mask 255.255.255.0")  # 定义网络地址和子网掩码
-        self.device.execute_some_command("gateway-list 192.168.37.254")  # 设置默认网关
+        self.device.execute_some_command(f"network {network_str} mask 255.255.255.0")  # 定义网络地址和子网掩码
+        # 提取网段信息并计算网关IP
+        parts = network_str.split('.')
+        gateway_ip = ".".join([parts[0], parts[1], parts[2], "1"])
+        self.device.execute_some_command(f"gateway-list {gateway_ip}")
+        #self.device.execute_some_command(f"gateway-list 192.168.37.254")  # 设置默认网关
         self.device.execute_some_command("dns-list 8.8.8.8 8.8.4.4")  # 设置DNS服务器
         self.device.execute_some_command("quit")  # 退出地址池配置模式
-        self.device.execute_some_command("quit") #退出系统视图模式
+        self.device.execute_some_command("display ip pool") # 查看地址池配置
+        self.device.execute_some_command("quit")  # 退出系统视图模式
+
 
     def on_btn_stp_clicked(self):
         print("stp")
+        stp_mode = self.stp_comboBox.currentText()  # 获取QComboBox中选择的STP模式
+        print(stp_mode)
         self.device.execute_some_command("system-view")
         self.device.execute_some_command("stp enable")  # 开启STP服务
-        self.device.execute_some_command("stp mode stp")  # STP模式为STP
+        self.device.execute_some_command(f"stp mode {stp_mode}")  # STP模式为STP
         self.device.execute_some_command("stp root primary") #设置当前设备为生成树协议的根桥
+        self.device.execute_some_command("interface GigabitEthernet 0/0/1")
+        self.device.execute_some_command("stp edged-port enable")  # 配置为边缘端口，防止被阻塞
+        self.device.execute_some_command("stp port priority 128")  # 设置端口优先级
+        self.device.execute_some_command("stp cost 2000")  # 设置STP的端口成本
+        self.device.execute_some_command("quit")  # 退出接口配置模式
         self.device.execute_some_command("display stp brief") #查看stp的简要信息
-        self.device.execute_some_command("quit")
+        self.device.execute_some_command("quit")  # 退出系统视图模式
 
     def on_btn_vlan_clicked(self):
         print("vlan")
-        self.device.execute_some_command("system-view")
+        '''self.device.execute_some_command("system-view")
         self.device.execute_some_command("vlan 10")
-        self.device.execute_some_command("quit")
-        # self.device.execute_some_command("interface Vlanif10")
-        # self.device.execute_some_command("ip add 192.168.37.100 255.255.255.0")
-        # self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/1")
+        self.device.execute_some_command("interface Vlanif 10")
+        self.device.execute_some_command("ip address 192.168.37.115 24")
+        self.device.execute_some_command("interface GigabitEthernet 0/0/1")
         self.device.execute_some_command("port link-type access")
         self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/2")
-        self.device.execute_some_command("port link-type access")
-        self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("display vlan")
-        self.device.execute_some_command("display ip interface brief")
-        self.device.execute_some_command("display ip routing-table")
-        # 完善vlan相关命令
+        self.device.execute_some_command("quit")'''
 
     def on_btn_acl_clicked(self):
         print("acl")
+        ip_str = self.acl_inputIp.text()
+        print(ip_str)
         self.device.execute_some_command("system-view")# 进入系统视图模式
+        acl_result = self.device.execute_some_command("display acl all")
+        if "2000" in acl_result:
+            print("ACL 2000 已经存在, 正在检查应用情况...")
+            applied_result = self.device.execute_some_command("display current-configuration | include acl 2000")
+            if "2000" in applied_result:
+                print("ACL 2000 正在被应用，需要先移除应用...")
+                self.device.execute_some_command("interface GigabitEthernet0/0/1")
+                self.device.execute_some_command("undo traffic-filter inbound acl 2000")
+                self.device.execute_some_command("quit")
+                self.device.execute_some_command("undo acl number 2000")
+        else:
+            print("创建新的acl规则")
         self.device.execute_some_command("acl number 2000")  # 创建ACL 2000
-        self.device.execute_some_command("rule permit source 192.168.37.0 0.0.0.255")  # 添加允许规则
+        self.device.execute_some_command(f"rule permit source {ip_str} 0")  # 添加允许规则
         self.device.execute_some_command("interface GigabitEthernet0/0/1")  # 进入接口GigabitEthernet0/0/1
         self.device.execute_some_command("traffic-filter inbound acl 2000")  # 在接口上应用ACL
         self.device.execute_some_command("quit") #退出接口模式
+        self.device.execute_some_command("display acl 2000")
         self.device.execute_some_command("quit") #退出系统视图模式
 
-    def on_btn_vrrp_clicked(self):
-        print("vrrp")
-        self.device.execute_some_command("system-view")
-        self.device.execute_some_command("vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/1")
-        self.device.execute_some_command("port link-type access")
-        self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/2")
-        self.device.execute_some_command("port link-type access")
-        self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("interface Vlanif 10")
-        self.device.execute_some_command("vrrp vrid 1 virtual-ip 192.168.37.102")
-        self.device.execute_some_command("vrrp vrid 1 priority 150")
-        self.device.execute_some_command("vrrp vrid 1 preempt-mode timer delay 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("display vrrp")
-        #添加相关代码
 
-    def on_btn_ospf_clicked(self):
-        print("ospf")
-        self.device.execute_some_command("system-view")
-        self.device.execute_some_command("vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/1")
-        self.device.execute_some_command("port link-type access")
-        self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("int g0/0/2")
-        self.device.execute_some_command("port link-type access")
-        self.device.execute_some_command("port default vlan 10")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("ospf 1")
-        self.device.execute_some_command("area 0")
-        self.device.execute_some_command("network 192.168.37.0 0.0.0.255")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("quit")
-        self.device.execute_some_command("display ospf peer")
-        self.device.execute_some_command("display ospf interface")
-        self.device.execute_some_command("display ospf routing")
-        self.device.execute_some_command("display ospf brief")
-        # 添加相关代码
     def parse_data(self,config_str):
         config_dict = {}
         current_key = None
         current_sub_dict = None
-        if config_str is None:
-            return
 
         lines = config_str.split('\n')
         for line in lines:
@@ -395,9 +403,8 @@ class switch_config(BasicEditor):
         return dict(items)
 
     def on_btn_test_clicked(self):
-        # 查看配置disp cu
+        # QMessageBox.information(None, "测试", "单击了按钮")
         #在该函数下添加你想要做的操作代码
-        # self.device.execute_some_command("quit")
         retstr= self.device.execute_some_command("disp cu")
         self.lineEdit.setText(retstr)
         result =self.parse_data(retstr)
@@ -406,9 +413,6 @@ class switch_config(BasicEditor):
         self.add_dict_to_tree(self.treedata, result)
 
     def add_dict_to_tree(self, tree, data):
-        if data is None:
-            print("data is null")
-            return
         for key, value in data.items():
             item = QTreeWidgetItem([key, str(value)])
             if isinstance(value, dict):
@@ -451,4 +455,3 @@ class switch_config(BasicEditor):
             return
         # if len(device.kmapcustom):
         #     print(device.kmapcustom)
-
