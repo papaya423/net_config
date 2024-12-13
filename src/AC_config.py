@@ -27,12 +27,14 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal, QObject, QSize,Qt,QCoreApplication
 from PyQt5.QtGui import QColor, QFont, QPalette
 from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QSizePolicy, QGridLayout, QLabel, QSlider, \
-    QComboBox, QColorDialog, QCheckBox, QLineEdit, QButtonGroup, QRadioButton, QFileDialog, QMessageBox
+    QComboBox, QColorDialog, QCheckBox, QLineEdit, QButtonGroup, QRadioButton, QFileDialog, QMessageBox, QTextEdit, \
+    QTreeWidget, QTreeWidgetItem
 from PyQt5.QtGui import QColor,QImage,QPixmap
 from basic_editor import BasicEditor
 from Send_alarm import SendAlarm
 from PIL import Image
 import cv2
+import re
 tr = QCoreApplication.translate
 
 
@@ -124,26 +126,149 @@ class ac_config(BasicEditor):
 
         self.handlers = [NetConfigSetHandler(self.container)]
 
-    def setupUi(self,Form,contain):
 
-        self.label = QLabel("模式")
-        self.radioButton = QRadioButton("单选模式1")
-        self.radioButton_2 = QRadioButton("单选模式2")
-        self.radioModeGrp = QButtonGroup()
-        self.radioModeGrp.addButton(self.radioButton, 1)
-        self.radioModeGrp.addButton(self.radioButton_2, 0)
-        self.radioModeGrp.buttonClicked.connect(self.on_radiobtn_Mode_clicked)
-        self.radioButton.setChecked(1)
+    #添加代码
+    def setupUi(self,Form,contain):
+        # self.label = QLabel("按钮")
+        self.testButton = QPushButton("查看配置")
+        self.testButton.clicked.connect(self.on_btn_test_clicked)
+
+
+        self.lineEdit = QTextEdit()
+        self.lineEdit.setFixedWidth(1300)
+
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.addWidget(self.label)
-        self.horizontalLayout.addWidget(self.radioButton)
-        self.horizontalLayout.addWidget(self.radioButton_2)
+        self.horizontalLayout.addWidget(self.lineEdit)
+        self.horizontalLayout.setStretch(1,1)
+        self.horizontalLayout.setStretch(1, 2)
+
+
+
+        # 创建一个垂直布局
+        layout = QVBoxLayout()
+        layout.addWidget(self.testButton)
+        # 将布局设置为窗口的主布局
+        contain.addLayout(layout)
         contain.addLayout(self.horizontalLayout)
+
+
 
     def on_radiobtn_Mode_clicked(self,button):
         id = self.radioModeGrp.id(button)
         self.mode=id;
         print(f"id={id}")
+
+
+    def add_dict_to_tree(self, tree, data):
+        for key, value in data.items():
+            item = QTreeWidgetItem([key, str(value)])
+            if isinstance(value, dict):
+                self.add_dict_to_tree(tree, value)
+            else:
+                item.setFlags(item.flags() ^ 2)  # 去掉可编辑的标志
+            tree.addTopLevelItem(item)
+
+    def parse_data(self,config_str):
+        config_dict = {}
+        current_key = None
+        current_sub_dict = None
+
+        lines = config_str.split('\n')
+        for line in lines:
+            line = line.strip()
+
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+
+                # Handle nested structures like interfaces
+            if line.endswith('{'):
+                current_key = line[:-1].strip()
+                current_sub_dict = {}
+                config_dict[current_key] = current_sub_dict
+            elif line.startswith('}'):
+                current_key = None
+                current_sub_dict = None
+            else:
+                # Split the line into key and value
+                if ' ' in line:
+                    key, value = line.split(' ', 1)
+                    key = key.strip()
+                    value = value.strip()
+                else:
+                    key = line.strip()
+                    value = None
+
+                if key in config_dict.keys():
+                    current_sub_dict={}
+                    valuetemp= config_dict[key]
+                    if isinstance(valuetemp, list):
+                        values = valuetemp+[value]
+                    else:
+                        values = [valuetemp,value]
+                    config_dict[key] = values
+                    # Handle nested keys
+                # if current_sub_dict:
+                #     current_sub_dict[key] = value
+                #     # config_dict[key] = values
+                else:
+                    config_dict[key] = value
+
+                    # Post-process to handle interfaces with configurations
+        interface_pattern = re.compile(r'^interface\s+(\S+)')
+        ip_address_pattern = re.compile(r'^ip\s+address\s+(\S+)\s+(\S+)')
+        for key, value in list(config_dict.items()):
+            if isinstance(value, dict):
+                # Extract interface details
+                match = interface_pattern.match(key)
+                if match:
+                    interface_name = match.group(1)
+                    # Look for IP address configuration in the sub-dict
+                    for sub_key, sub_value in value.items():
+                        if isinstance(sub_value, dict):
+                            ip_match = ip_address_pattern.match(' '.join(sub_value.keys()))
+                            if ip_match:
+                                ip_address = ip_match.group(1)
+                                subnet_mask = ip_match.group(2)
+                                # Update the dictionary structure
+                                config_dict[interface_name] = {
+                                    'type': 'interface',
+                                    'ip_address': ip_address,
+                                    'subnet_mask': subnet_mask,
+                                    # Keep other configurations if any
+                                    'config': {k: v for k, v in sub_value.items() if k not in ['ip address']}
+                                }
+                                # Remove the old interface entry
+                                del config_dict[key]
+                                break
+        return self.flatten_dict(config_dict)
+                                # Flatten the dictionary (remove empty nested dicts)
+
+    def flatten_dict(self,d, parent_key='', sep='.'):
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self.flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+    #修改代码
+    def on_btn_test_clicked(self):
+        # QMessageBox.information(None, "测试", "单击了按钮")
+        #在该函数下添加你想要做的操作代码
+        retstr= self.device.execute_some_command("disp ap all")
+        self.lineEdit.setText(retstr)
+        result =self.parse_data(retstr)
+        print(result)
+
+
+
+
+
+
+
 
  # layout 移除所有控件
     def remove_all_controls(self,layout):
@@ -168,6 +293,9 @@ class ac_config(BasicEditor):
     def valid(self):
         # return isinstance(self.device, VialKeyboard)
         return 1
+
+
+
 
     def rebuild(self, device):
         super().rebuild(device)
