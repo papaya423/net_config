@@ -137,19 +137,93 @@ class ac_config(BasicEditor):
         self.lineEdit = QTextEdit()
         self.lineEdit.setFixedWidth(1300)
 
+        # print(retstr)
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.addWidget(self.lineEdit)
-        self.horizontalLayout.setStretch(1,1)
+        self.horizontalLayout.setStretch(1, 1)
         self.horizontalLayout.setStretch(1, 2)
 
+        # 创建vlan输入框和按钮
+        self.layout1 = QHBoxLayout()
 
+        yewu_layout = QVBoxLayout()
+        self.btn_yewu= QPushButton("ap通信")
 
-        # 创建一个垂直布局
-        layout = QVBoxLayout()
-        layout.addWidget(self.testButton)
+        # 创建业务vlan和管理vlan的输入框
+        self.yewu_label = QLabel("定义网络地址")  # 创建QLabel
+        self.yewu_inputIp = QLineEdit()
+        self.btn_yewu.setToolTip(
+         """这是业务功能的配置:
+            sy
+            sysname AC
+            vlan batch 10
+            dhcp enable 
+            ip pool vlan10 
+            gateway-list 192.168.10.254 
+            network 192.168.10.0 255.255.255.0 
+            dns-list 114.114.114.114 8.8.8.8 
+            quit
+            interface Vlanif10
+            ip address 192.168.10.254 255.255.255.0
+            dhcp select global
+            quit
+            interface GigabitEthernet0/0/1 
+            port link-type trunk
+            port trunk pvid vlan 10
+            undo port trunk allow-pass vlan 1
+            port trunk allow-pass vlan 10
+            quit""")
+        self.btn_yewu.clicked.connect(self.on_btn_yewu_clicked)
+
+        yewu_layout.addWidget(self.yewu_label)  # 添加标签
+        yewu_layout.addWidget(self.yewu_inputIp)
+        yewu_layout.addWidget(self.btn_yewu)
+        self.layout1.addLayout(yewu_layout)
+        self.yewu_inputIp.setFixedSize(300,45)
+        # 布局
+        yewu_layout = QVBoxLayout()
+        guanli_layout = QVBoxLayout()
+        yewu_layout.addWidget(self.yewu_label)
+        yewu_layout.addWidget(self.yewu_inputIp)
+        yewu_layout.addWidget(self.btn_yewu)
+
+        self.layout1.addLayout(yewu_layout)
+
         # 将布局设置为窗口的主布局
-        contain.addLayout(layout)
+        contain.addLayout(self.layout1)
         contain.addLayout(self.horizontalLayout)
+        contain.addWidget(self.testButton)
+
+    def on_btn_yewu_clicked(self):
+        #print("dhcp")
+        network_str = self.yewu_inputIp.text()
+        print(network_str)
+        self.device.execute_some_command("system-view")
+        self.device.execute_some_command("sysname AC")  # 开启DHCP功能
+        self.device.execute_some_command("undo info-center enable")  # 关闭消息提醒功能
+        self.device.execute_some_command("vlan batch 10 20")  # 进入VLANIF 10接口
+        self.device.execute_some_command("interface Vlanif10")
+        self.device.execute_some_command(f"ip add {network_str} 255.255.255.0")  # 定义网络地址和子网掩码
+        self.device.execute_some_command("dhcp select global")
+        self.device.execute_some_command("quit")
+        self.device.execute_some_command("dhcp enable")  # 选择全局地址池
+        self.device.execute_some_command("ip pool vlan10")
+        self.device.execute_some_command(f"network {network_str} mask 255.255.255.0")  # 定义网络地址和子网掩码
+        # 提取网段信息并计算网关IP
+        parts = network_str.split('.')
+        gateway_ip = ".".join([parts[0], parts[1], parts[2], "1"])
+        self.device.execute_some_command(f"gateway-list {gateway_ip}")
+        self.device.execute_some_command("dns-list 114.114.114.114 8.8.8.8")
+        self.device.execute_some_command("quit")
+        self.device.execute_some_command("interface GigabitEthernet0/0/1")
+        self.device.execute_some_command("port link-type trunk")
+        self.device.execute_some_command("port trunk pvid vlan 10")
+        self.device.execute_some_command("undo port trunk allow-pass vlan 1")
+        self.device.execute_some_command("port trunk allow-pass vlan 10")
+        self.device.execute_some_command("quit")
+        self.device.execute_some_command("display ip pool")  # 查看地址池配置
+        self.device.execute_some_command("quit")  # 退出系统视图模式
+
 
 
 
